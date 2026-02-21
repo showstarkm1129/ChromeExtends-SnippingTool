@@ -1,4 +1,46 @@
+// Snipping Tool — Background Service Worker
 // タブキャプチャとダウンロード処理を担当
+
+// --- IndexedDB ヘルパー（FileSystemDirectoryHandle の取得） ---
+function openDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open('SnippingToolDB', 1);
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains('settings')) {
+                db.createObjectStore('settings');
+            }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+async function getDirectoryHandle() {
+    try {
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction('settings', 'readonly');
+            const request = tx.objectStore('settings').get('directoryHandle');
+            request.onsuccess = () => resolve(request.result || null);
+            request.onerror = () => reject(request.error);
+        });
+    } catch (e) {
+        return null;
+    }
+}
+
+// --- data URL → Blob 変換（Service Worker互換） ---
+function dataUrlToBlob(dataUrl) {
+    const parts = dataUrl.split(',');
+    const mime = parts[0].match(/:(.*?);/)[1];
+    const binaryString = atob(parts[1]);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+    }
+    return new Blob([bytes], { type: mime });
+}
 
 // --- メッセージハンドラ ---
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -24,8 +66,6 @@ async function handleMessage(message, sender) {
 // --- タブキャプチャ ---
 async function captureTab(message, sender) {
     try {
-        // content scriptからの場合はsender.tabを使用
-        // popupからの場合はアクティブタブのwindowIdを使用
         let windowId;
         if (sender && sender.tab) {
             windowId = sender.tab.windowId;
@@ -42,20 +82,42 @@ async function captureTab(message, sender) {
 
 // --- 画像をダウンロード ---
 async function downloadImage(message) {
-    const { imageData, folder, filename } = message;
+    const { imageData, filename } = message;
 
     try {
-        // フォルダ付きのパスを構築（ダウンロードフォルダからの相対パス）
-        const savePath = folder ? `${folder}/${filename}` : filename;
+        // ユーザーが選択したディレクトリハンドルの取得を試みる
+        const settings = await chrome.storage.local.get(['useDirectoryHandle']);
+
+        if (settings.useDirectoryHandle) {
+            const dirHandle = await getDirectoryHandle();
+            if (dirHandle) {
+                // パーミッション確認
+                const permission = await dirHandle.queryPermission({ mode: 'readwrite' });
+                if (permission === 'granted') {
+                    // File System Access API で直接書き込み
+                    const blob = dataUrlToBlob(imageData);
+                    const fileHandle = await dirHandle.getFileHandle(filename, { create: true });
+                    const writable = await fileHandle.createWritable();
+                    await writable.write(blob);
+                    await writable.close();
+                    return { success: true, method: 'filesystem' };
+                }
+            }
+        }
+
+        // フォールバック: chrome.downloads を使用（ダウンロードフォルダ/Pictures に保存）
+        const folderData = await chrome.storage.local.get(['saveFolderDisplay']);
+        const folder = folderData.saveFolderDisplay || 'Pictures';
+        const savePath = `${folder}/${filename}`;
 
         const downloadId = await chrome.downloads.download({
             url: imageData,
             filename: savePath,
-            saveAs: false,       // 事前に設定済みなのでダイアログなしで即保存
+            saveAs: false,
             conflictAction: 'uniquify'
         });
 
-        return { success: true, downloadId: downloadId };
+        return { success: true, downloadId: downloadId, method: 'downloads' };
     } catch (error) {
         return { success: false, error: error.message };
     }

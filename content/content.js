@@ -326,16 +326,12 @@
             saveBtn.disabled = true;
             saveBtn.innerHTML = '⌛ 保存中...';
 
-            // 保存先フォルダを取得
-            const data = await chrome.storage.local.get('saveFolder');
-            const folder = data.saveFolder || 'Pictures';
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-').replace('T', '_').slice(0, 19);
             const filename = `screenshot_${timestamp}.png`;
 
             chrome.runtime.sendMessage({
                 action: 'downloadImage',
                 imageData: imageData,
-                folder: folder,
                 filename: filename
             }, (response) => {
                 if (response && response.success) {

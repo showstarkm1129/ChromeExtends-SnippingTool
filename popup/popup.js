@@ -3,6 +3,32 @@
  * 保存先設定、キャプチャ開始のUIロジック
  */
 
+// --- IndexedDB ヘルパー（FileSystemDirectoryHandle の永続化） ---
+function openDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open('SnippingToolDB', 1);
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains('settings')) {
+                db.createObjectStore('settings');
+            }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+async function saveDirectoryHandle(handle) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction('settings', 'readwrite');
+        tx.objectStore('settings').put(handle, 'directoryHandle');
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+    });
+}
+
+// --- メインロジック ---
 document.addEventListener('DOMContentLoaded', () => {
     const saveFolderInput = document.getElementById('saveFolderInput');
     const browseFolderBtn = document.getElementById('browseFolderBtn');
@@ -16,22 +42,28 @@ document.addEventListener('DOMContentLoaded', () => {
     init();
 
     async function init() {
-        const data = await chrome.storage.local.get('saveFolder');
-        saveFolderInput.value = data.saveFolder || DEFAULT_FOLDER;
+        const data = await chrome.storage.local.get(['saveFolderDisplay']);
+        saveFolderInput.value = data.saveFolderDisplay || DEFAULT_FOLDER;
     }
 
     // --- フォルダ参照ボタン（エクスプローラーで選択） ---
     browseFolderBtn.addEventListener('click', async () => {
         try {
-            // showDirectoryPicker でフォルダ選択ダイアログを表示
             const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-            // 選択されたフォルダ名をサブフォルダ名として使用
-            const folderName = dirHandle.name;
-            saveFolderInput.value = folderName;
-            chrome.storage.local.set({ saveFolder: folderName });
-            showStatus(`📁 保存先を「${folderName}」に設定しました`, 'success');
+
+            // IndexedDB にハンドルを保存（バックグラウンドと共有）
+            await saveDirectoryHandle(dirHandle);
+
+            // 表示名をストレージに保存
+            const displayName = dirHandle.name;
+            await chrome.storage.local.set({
+                saveFolderDisplay: displayName,
+                useDirectoryHandle: true
+            });
+
+            saveFolderInput.value = displayName;
+            showStatus(`📁 保存先を「${displayName}」に設定しました`, 'success');
         } catch (err) {
-            // ユーザーがキャンセルした場合
             if (err.name !== 'AbortError') {
                 showStatus('フォルダの選択に失敗しました', 'error');
             }
@@ -39,10 +71,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- デフォルトに戻すボタン ---
-    resetFolderBtn.addEventListener('click', () => {
+    resetFolderBtn.addEventListener('click', async () => {
         saveFolderInput.value = DEFAULT_FOLDER;
-        chrome.storage.local.set({ saveFolder: DEFAULT_FOLDER });
-        showStatus('保存先をデフォルトに戻しました', 'info');
+        await chrome.storage.local.set({
+            saveFolderDisplay: DEFAULT_FOLDER,
+            useDirectoryHandle: false
+        });
+        showStatus('保存先をデフォルト（ダウンロード/Pictures）に戻しました', 'info');
     });
 
     // --- キャプチャ開始 ---
