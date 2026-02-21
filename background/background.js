@@ -42,15 +42,16 @@ async function captureTab(message, sender) {
 
 // --- 画像をダウンロード ---
 async function downloadImage(message) {
-    const { imageData, filename } = message;
+    const { imageData, folder, filename } = message;
 
     try {
-        // data:image/png;base64,... を直接 chrome.downloads.download に渡す
-        // （Service Worker では fetch(dataUrl) や URL.createObjectURL が使えないため）
+        // フォルダ付きのパスを構築（ダウンロードフォルダからの相対パス）
+        const savePath = folder ? `${folder}/${filename}` : filename;
+
         const downloadId = await chrome.downloads.download({
             url: imageData,
-            filename: filename,
-            saveAs: true,
+            filename: savePath,
+            saveAs: false,       // 事前に設定済みなのでダイアログなしで即保存
             conflictAction: 'uniquify'
         });
 
