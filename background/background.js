@@ -1,49 +1,11 @@
 // Snipping Tool — Background Service Worker
-// タブキャプチャとダウンロード処理を担当
-
-// --- IndexedDB ヘルパー（FileSystemDirectoryHandle の取得） ---
-function openDB() {
-    return new Promise((resolve, reject) => {
-        const request = indexedDB.open('SnippingToolDB', 1);
-        request.onupgradeneeded = (event) => {
-            const db = event.target.result;
-            if (!db.objectStoreNames.contains('settings')) {
-                db.createObjectStore('settings');
-            }
-        };
-        request.onsuccess = () => resolve(request.result);
-        request.onerror = () => reject(request.error);
-    });
-}
-
-async function getDirectoryHandle() {
-    try {
-        const db = await openDB();
-        return new Promise((resolve, reject) => {
-            const tx = db.transaction('settings', 'readonly');
-            const request = tx.objectStore('settings').get('directoryHandle');
-            request.onsuccess = () => resolve(request.result || null);
-            request.onerror = () => reject(request.error);
-        });
-    } catch (e) {
-        return null;
-    }
-}
-
-// --- data URL → Blob 変換（Service Worker互換） ---
-function dataUrlToBlob(dataUrl) {
-    const parts = dataUrl.split(',');
-    const mime = parts[0].match(/:(.*?);/)[1];
-    const binaryString = atob(parts[1]);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-    }
-    return new Blob([bytes], { type: mime });
-}
+// タブキャプチャを担当し、保存はオフスクリーンドキュメント経由で実行
 
 // --- メッセージハンドラ ---
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    // offscreen document からのメッセージは無視
+    if (message.action === 'writeFile') return false;
+
     handleMessage(message, sender)
         .then(sendResponse)
         .catch(error => sendResponse({ success: false, error: error.message }));
@@ -80,32 +42,47 @@ async function captureTab(message, sender) {
     }
 }
 
+// --- オフスクリーンドキュメントの作成 ---
+async function ensureOffscreenDocument() {
+    const existingContexts = await chrome.runtime.getContexts({
+        contextTypes: ['OFFSCREEN_DOCUMENT']
+    });
+    if (existingContexts.length > 0) return;
+
+    await chrome.offscreen.createDocument({
+        url: 'saver/saver.html',
+        reasons: ['BLOBS'],
+        justification: 'ユーザーが選択したフォルダにスクリーンショットを書き込むため'
+    });
+}
+
 // --- 画像をダウンロード ---
 async function downloadImage(message) {
     const { imageData, filename } = message;
 
     try {
-        // ユーザーが選択したディレクトリハンドルの取得を試みる
+        // ユーザーがフォルダを選択済みか確認
         const settings = await chrome.storage.local.get(['useDirectoryHandle']);
 
         if (settings.useDirectoryHandle) {
-            const dirHandle = await getDirectoryHandle();
-            if (dirHandle) {
-                // パーミッション確認
-                const permission = await dirHandle.queryPermission({ mode: 'readwrite' });
-                if (permission === 'granted') {
-                    // File System Access API で直接書き込み
-                    const blob = dataUrlToBlob(imageData);
-                    const fileHandle = await dirHandle.getFileHandle(filename, { create: true });
-                    const writable = await fileHandle.createWritable();
-                    await writable.write(blob);
-                    await writable.close();
-                    return { success: true, method: 'filesystem' };
-                }
+            // Offscreen document を使用してファイルシステムに直接書き込み
+            await ensureOffscreenDocument();
+
+            const result = await chrome.runtime.sendMessage({
+                action: 'writeFile',
+                imageData: imageData,
+                filename: filename
+            });
+
+            if (result && result.success) {
+                return result;
             }
+
+            // ファイルシステム書き込みが失敗した場合、エラーを返す（フォールバックしない）
+            console.error('Offscreen write failed:', result?.error);
         }
 
-        // フォールバック: chrome.downloads を使用（ダウンロードフォルダ/Pictures に保存）
+        // フォルダ未選択時のフォールバック: chrome.downloads （ダウンロードフォルダ/Pictures）
         const folderData = await chrome.storage.local.get(['saveFolderDisplay']);
         const folder = folderData.saveFolderDisplay || 'Pictures';
         const savePath = `${folder}/${filename}`;
