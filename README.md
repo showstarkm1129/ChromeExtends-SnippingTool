@@ -55,3 +55,7 @@ SnippingTool/
     ├── icon48.png
     └── icon128.png
 ```
+
+## Contribute
+LLM > 99%
+showstarkm1129 < 1%
