@@ -45,15 +45,12 @@ async function downloadImage(message) {
     const { imageData, filename } = message;
 
     try {
-        // data:image/png;base64,... → Blob URL
-        const response = await fetch(imageData);
-        const blob = await response.blob();
-        const blobUrl = URL.createObjectURL(blob);
-
+        // data:image/png;base64,... を直接 chrome.downloads.download に渡す
+        // （Service Worker では fetch(dataUrl) や URL.createObjectURL が使えないため）
         const downloadId = await chrome.downloads.download({
-            url: blobUrl,
+            url: imageData,
             filename: filename,
-            saveAs: true, // ここを true にすることで、エクスプローラーの保存ダイアログが出る
+            saveAs: true,
             conflictAction: 'uniquify'
         });
 
