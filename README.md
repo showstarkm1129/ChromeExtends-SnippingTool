@@ -57,5 +57,5 @@ SnippingTool/
 ```
 
 ## Contribute
-LLM > 99%
-showstarkm1129 < 1%
+- LLM > 99%
+- showstarkm1129 < 1%
