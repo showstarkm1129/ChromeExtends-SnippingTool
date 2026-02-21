@@ -1,0 +1,352 @@
+/* ========================================
+   Snipping Tool — Popup Styles
+   ダークテーマ + グリーンアクセント
+   ======================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* --- リセット & ベース --- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --bg-primary: #0d1117;
+    --bg-secondary: #161b22;
+    --bg-card: #1c2333;
+    --bg-input: #0d1117;
+    --border-color: #30363d;
+    --text-primary: #e6edf3;
+    --text-secondary: #8b949e;
+    --text-hint: #6e7681;
+    --accent: #00e676;
+    --accent-dark: #00c853;
+    --accent-glow: rgba(0, 230, 118, 0.15);
+    --accent-glow-strong: rgba(0, 230, 118, 0.3);
+    --danger: #f85149;
+    --danger-dark: #da3633;
+    --success: #3fb950;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-glow: 0 0 20px rgba(0, 230, 118, 0.2);
+    --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+body {
+    font-family: 'Inter', 'Segoe UI', 'Meiryo', sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    width: 340px;
+    min-height: 200px;
+    overflow-x: hidden;
+}
+
+/* --- コンテナ --- */
+.container {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+/* --- ヘッダー --- */
+.header {
+    text-align: center;
+    padding: 12px 0 4px;
+}
+
+.header-icon {
+    font-size: 28px;
+    margin-bottom: 4px;
+    filter: drop-shadow(0 0 8px rgba(0, 230, 118, 0.4));
+}
+
+.header-title {
+    font-size: 18px;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), #69f0ae);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: 0.5px;
+}
+
+.header-subtitle {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+}
+
+/* --- 設定カード --- */
+.settings-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+}
+
+.setting-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+}
+
+.setting-icon {
+    font-size: 14px;
+}
+
+.input-group {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.input-field {
+    flex: 1;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    color: var(--text-primary);
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.input-field:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.input-field::placeholder {
+    color: var(--text-hint);
+}
+
+.btn-icon {
+    width: 34px;
+    height: 34px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition);
+}
+
+.btn-icon:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border-color: var(--accent);
+}
+
+.setting-hint {
+    font-size: 10px;
+    color: var(--text-hint);
+    margin-top: 6px;
+    line-height: 1.4;
+}
+
+/* --- キャプチャボタン --- */
+.capture-section {
+    display: flex;
+    justify-content: center;
+}
+
+.btn-capture {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #1b5e20, #2e7d32);
+    border: 1px solid var(--accent-dark);
+    border-radius: var(--radius-md);
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all var(--transition);
+    box-shadow: var(--shadow-soft);
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-capture::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, transparent, rgba(0, 230, 118, 0.15));
+    opacity: 0;
+    transition: opacity var(--transition);
+}
+
+.btn-capture:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-glow), var(--shadow-soft);
+}
+
+.btn-capture:hover::before {
+    opacity: 1;
+}
+
+.btn-capture:active {
+    transform: translateY(0);
+}
+
+.btn-capture-icon {
+    font-size: 16px;
+}
+
+/* --- プレビューセクション --- */
+.preview-section {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.preview-header {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-color);
+    background: rgba(0, 230, 118, 0.05);
+}
+
+.preview-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+    letter-spacing: 0.5px;
+}
+
+.preview-container {
+    padding: 10px;
+    display: flex;
+    justify-content: center;
+    background: var(--bg-input);
+    max-height: 300px;
+    overflow: auto;
+}
+
+.preview-image {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* --- アクションボタン --- */
+.action-buttons {
+    display: flex;
+    gap: 8px;
+    padding: 10px 14px;
+    border-top: 1px solid var(--border-color);
+}
+
+.btn-save,
+.btn-discard {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 9px 12px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all var(--transition);
+    border: 1px solid transparent;
+}
+
+.btn-save {
+    background: linear-gradient(135deg, #1b5e20, #2e7d32);
+    border-color: var(--accent-dark);
+    color: white;
+}
+
+.btn-save:hover {
+    background: linear-gradient(135deg, #2e7d32, #388e3c);
+    box-shadow: 0 0 12px rgba(0, 230, 118, 0.25);
+    transform: translateY(-1px);
+}
+
+.btn-discard {
+    background: var(--bg-input);
+    border-color: var(--border-color);
+    color: var(--text-secondary);
+}
+
+.btn-discard:hover {
+    background: rgba(248, 81, 73, 0.1);
+    border-color: var(--danger);
+    color: var(--danger);
+    transform: translateY(-1px);
+}
+
+/* --- ステータスメッセージ --- */
+.status-message {
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 500;
+    text-align: center;
+    animation: fadeIn 0.25s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.status-message.success {
+    background: rgba(63, 185, 80, 0.12);
+    border: 1px solid rgba(63, 185, 80, 0.3);
+    color: var(--success);
+}
+
+.status-message.error {
+    background: rgba(248, 81, 73, 0.12);
+    border: 1px solid rgba(248, 81, 73, 0.3);
+    color: var(--danger);
+}
+
+.status-message.info {
+    background: var(--accent-glow);
+    border: 1px solid rgba(0, 230, 118, 0.25);
+    color: var(--accent);
+}
+
+/* --- ユーティリティ --- */
+.hidden {
+    display: none !important;
+}

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Snipping Tool</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="container">
+        <!-- ヘッダー -->
+        <header class="header">
+            <div class="header-icon">✂️</div>
+            <h1 class="header-title">Snipping Tool</h1>
+            <p class="header-subtitle">ウェブページの範囲を画像として保存</p>
+        </header>
+
+        <!-- 保存先設定 -->
+        <section class="settings-card">
+            <label class="setting-label" for="saveFolderInput">
+                <span class="setting-icon">📁</span>
+                保存先フォルダ
+            </label>
+            <div class="input-group">
+                <input type="text" id="saveFolderInput" class="input-field" placeholder="Pictures" value="Pictures">
+                <button id="resetFolderBtn" class="btn-icon" title="デフォルトに戻す">↺</button>
+            </div>
+            <p class="setting-hint">ダウンロードフォルダ配下のサブフォルダ名</p>
+        </section>
+
+        <!-- キャプチャボタン -->
+        <section class="capture-section">
+            <button id="captureBtn" class="btn-capture">
+                <span class="btn-capture-icon">📷</span>
+                <span class="btn-capture-text">キャプチャ開始</span>
+            </button>
+        </section>
+
+        <!-- プレビューエリア（キャプチャ後に表示） -->
+        <section id="previewSection" class="preview-section hidden">
+            <div class="preview-header">
+                <span class="preview-label">📸 プレビュー</span>
+            </div>
+            <div class="preview-container">
+                <img id="previewImage" class="preview-image" alt="キャプチャ画像">
+            </div>
+            <div class="action-buttons">
+                <button id="saveBtn" class="btn-save">
+                    <span>💾</span> 保存する
+                </button>
+                <button id="discardBtn" class="btn-discard">
+                    <span>🗑️</span> 破棄する
+                </button>
+            </div>
+        </section>
+
+        <!-- ステータス表示 -->
+        <div id="statusMessage" class="status-message hidden"></div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>
