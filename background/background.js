@@ -42,7 +42,7 @@ async function captureTab(message, sender) {
 
 // --- 画像をダウンロード ---
 async function downloadImage(message) {
-    const { imageData, folder, filename } = message;
+    const { imageData, filename } = message;
 
     try {
         // data:image/png;base64,... → Blob URL
@@ -50,12 +50,10 @@ async function downloadImage(message) {
         const blob = await response.blob();
         const blobUrl = URL.createObjectURL(blob);
 
-        const savePath = folder ? `${folder}/${filename}` : filename;
-
         const downloadId = await chrome.downloads.download({
             url: blobUrl,
-            filename: savePath,
-            saveAs: false,
+            filename: filename,
+            saveAs: true, // ここを true にすることで、エクスプローラーの保存ダイアログが出る
             conflictAction: 'uniquify'
         });
 

@@ -4,8 +4,6 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-    const saveFolderInput = document.getElementById('saveFolderInput');
-    const resetFolderBtn = document.getElementById('resetFolderBtn');
     const captureBtn = document.getElementById('captureBtn');
     const statusMessage = document.getElementById('statusMessage');
 
@@ -15,31 +13,8 @@ document.addEventListener('DOMContentLoaded', () => {
     init();
 
     async function init() {
-        // 保存先フォルダを復元
-        const data = await chrome.storage.local.get('saveFolder');
-        saveFolderInput.value = data.saveFolder || DEFAULT_FOLDER;
+        // 初期化処理は不要になりましたが、もし将来なにか追加するときのために残しておきます。
     }
-
-    // --- 保存先の変更を保存 ---
-    saveFolderInput.addEventListener('change', () => {
-        const folder = saveFolderInput.value.trim() || DEFAULT_FOLDER;
-        saveFolderInput.value = folder;
-        chrome.storage.local.set({ saveFolder: folder });
-    });
-
-    // フォーカス外れ時も保存
-    saveFolderInput.addEventListener('blur', () => {
-        const folder = saveFolderInput.value.trim() || DEFAULT_FOLDER;
-        saveFolderInput.value = folder;
-        chrome.storage.local.set({ saveFolder: folder });
-    });
-
-    // --- デフォルトに戻すボタン ---
-    resetFolderBtn.addEventListener('click', () => {
-        saveFolderInput.value = DEFAULT_FOLDER;
-        chrome.storage.local.set({ saveFolder: DEFAULT_FOLDER });
-        showStatus('保存先をデフォルトに戻しました', 'info');
-    });
 
     // --- キャプチャ開始 ---
     captureBtn.addEventListener('click', async () => {
