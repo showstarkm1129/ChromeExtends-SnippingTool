@@ -176,11 +176,8 @@
             const dpr = window.devicePixelRatio || 1;
             const croppedDataUrl = await cropWithCanvas(response.dataUrl, rect, dpr);
 
-            // トリミング済み画像を Background に送信
-            await chrome.runtime.sendMessage({
-                action: 'screenshotCaptured',
-                imageData: croppedDataUrl
-            });
+            // Web上にプレビューを表示
+            showPreviewUI(croppedDataUrl);
 
         } catch (error) {
             console.error('Capture error:', error);
@@ -237,6 +234,137 @@
         if (instructionLabel) { instructionLabel.remove(); instructionLabel = null; }
 
         isSelecting = false;
+    }
+
+    // --- Web上でのプレビューUI表示 ---
+    function showPreviewUI(imageData) {
+        // 既存のプレビューがあれば削除
+        const existingPreview = document.getElementById('snip-preview-container');
+        if (existingPreview) existingPreview.remove();
+
+        const previewContainer = document.createElement('div');
+        previewContainer.id = 'snip-preview-container';
+        previewContainer.style.cssText = `
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            z-index: 2147483647;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            font-family: 'Segoe UI', 'Meiryo', sans-serif;
+            color: #333;
+            border: 1px solid #e0e0e0;
+            max-width: 400px;
+            animation: snip-slide-up 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        `;
+
+        // アニメーション用スタイル定義
+        if (!document.getElementById('snip-styles')) {
+            const style = document.createElement('style');
+            style.id = 'snip-styles';
+            style.textContent = `
+                @keyframes snip-slide-up {
+                    from { opacity: 0; transform: translateY(20px) scale(0.95); }
+                    to { opacity: 1; transform: translateY(0) scale(1); }
+                }
+                .snip-btn {
+                    border: none;
+                    border-radius: 6px;
+                    padding: 8px 16px;
+                    font-size: 14px;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 6px;
+                    flex: 1;
+                }
+                .snip-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+                .snip-btn:active { transform: translateY(1px); box-shadow: none; }
+                .snip-btn-save { background: #00c853; color: white; }
+                .snip-btn-save:hover { background: #00b248; }
+                .snip-btn-discard { background: #f5f5f5; color: #d32f2f; border: 1px solid #e0e0e0; }
+                .snip-btn-discard:hover { background: #eeeeee; }
+            `;
+            document.head.appendChild(style);
+        }
+
+        const title = document.createElement('div');
+        title.innerHTML = '📸 <b>キャプチャ完了</b>';
+        title.style.cssText = 'font-size: 13px; width: 100%; text-align: left; margin-bottom: -4px; color: #555;';
+
+        const img = document.createElement('img');
+        img.src = imageData;
+        img.style.cssText = `
+            max-width: 100%;
+            max-height: 250px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            object-fit: contain;
+            background: #f9f9f9;
+        `;
+
+        const btnContainer = document.createElement('div');
+        btnContainer.style.cssText = `
+            display: flex;
+            gap: 12px;
+            width: 100%;
+        `;
+
+        const saveBtn = document.createElement('button');
+        saveBtn.className = 'snip-btn snip-btn-save';
+        saveBtn.innerHTML = '💾 保存する';
+        saveBtn.onclick = async () => {
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '⌛ 保存中...';
+
+            // 保存先設定を取得してダウンロード
+            const data = await chrome.storage.local.get('saveFolder');
+            const folder = data.saveFolder || 'Pictures';
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').replace('T', '_').slice(0, 19);
+            const filename = `screenshot_${timestamp}.png`;
+
+            chrome.runtime.sendMessage({
+                action: 'downloadImage',
+                imageData: imageData,
+                folder: folder,
+                filename: filename
+            }, (response) => {
+                if (response && response.success) {
+                    saveBtn.innerHTML = '✅ 完了';
+                    saveBtn.style.background = '#00e676';
+                    setTimeout(() => previewContainer.remove(), 800);
+                } else {
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '❌ エラー';
+                    setTimeout(() => { saveBtn.innerHTML = '💾 保存する'; }, 2000);
+                }
+            });
+        };
+
+        const discardBtn = document.createElement('button');
+        discardBtn.className = 'snip-btn snip-btn-discard';
+        discardBtn.innerHTML = '🗑️ 破棄する';
+        discardBtn.onclick = () => {
+            previewContainer.remove();
+        };
+
+        btnContainer.appendChild(discardBtn);
+        btnContainer.appendChild(saveBtn);
+
+        previewContainer.appendChild(title);
+        previewContainer.appendChild(img);
+        previewContainer.appendChild(btnContainer);
+
+        document.body.appendChild(previewContainer);
     }
 
     // --- 起動 ---

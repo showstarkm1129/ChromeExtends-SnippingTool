@@ -1,9 +1,4 @@
-/**
- * Snipping Tool — Background Service Worker
- * タブキャプチャ、画像一時保持、ダウンロード処理を担当
- */
-
-let pendingScreenshot = null;
+// タブキャプチャとダウンロード処理を担当
 
 // --- メッセージハンドラ ---
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -18,17 +13,8 @@ async function handleMessage(message, sender) {
         case 'captureTab':
             return await captureTab(message, sender);
 
-        case 'screenshotCaptured':
-            return screenshotCaptured(message);
-
-        case 'getPendingScreenshot':
-            return getPendingScreenshot();
-
         case 'downloadImage':
             return await downloadImage(message);
-
-        case 'clearScreenshot':
-            return clearScreenshot();
 
         default:
             return { success: false, error: `Unknown action: ${message.action}` };
@@ -54,17 +40,6 @@ async function captureTab(message, sender) {
     }
 }
 
-// --- キャプチャ済み画像を一時保持 ---
-function screenshotCaptured(message) {
-    pendingScreenshot = message.imageData;
-    return { success: true };
-}
-
-// --- ポップアップから画像を取得 ---
-function getPendingScreenshot() {
-    return { success: true, imageData: pendingScreenshot };
-}
-
 // --- 画像をダウンロード ---
 async function downloadImage(message) {
     const { imageData, folder, filename } = message;
@@ -88,10 +63,4 @@ async function downloadImage(message) {
     } catch (error) {
         return { success: false, error: error.message };
     }
-}
-
-// --- 画像をクリア ---
-function clearScreenshot() {
-    pendingScreenshot = null;
-    return { success: true };
 }
