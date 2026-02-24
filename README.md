@@ -56,6 +56,40 @@ SnippingTool/
     └── icon128.png
 ```
 
+## 既知の制限事項
+
+Chrome のセキュリティポリシーにより、一部のページではキャプチャ機能に制限があります。
+
+### キャプチャ不可（ブラウザの制限ページ）
+
+以下のページでは拡張機能のアクセスが完全にブロックされており、キャプチャできません。
+
+| ページ種別 | URL例 |
+|---|---|
+| Chrome 内部ページ | `chrome://settings`, `chrome://extensions` など |
+| Edge 内部ページ | `edge://settings` など |
+| 拡張機能ページ | `chrome-extension://...` |
+| DevTools | `devtools://...` |
+| ソース表示 | `view-source:...` |
+| About ページ | `about:blank`, `about:newtab` など |
+
+### 範囲指定不可（ページ全体キャプチャで代替）
+
+以下のページではコンテンツスクリプトの注入がブロックされるため、ドラッグによる範囲指定ができません。
+代わりに **ページ全体のキャプチャ** が自動的に実行され、ポップアップ内でプレビュー・保存が可能です。
+
+- **Chrome Web Store** (`chromewebstore.google.com`)
+- **Chrome 内蔵 PDF ビューア** で表示中の PDF ファイル
+- その他、コンテンツスクリプトの実行が制限されたサイト
+
+### `file://` URL（ローカルファイル）
+
+ローカルの HTML ファイル等をキャプチャするには、追加の設定が必要です。
+
+1. `chrome://extensions/` を開く
+2. Snipping Tool の「詳細」をクリック
+3. **「ファイルの URL へのアクセスを許可する」** をオンにする
+
 ## Contribute
 - LLM > 99%
 - showstarkm1129 < 1%

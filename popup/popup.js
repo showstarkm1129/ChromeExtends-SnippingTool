@@ -35,8 +35,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const resetFolderBtn = document.getElementById('resetFolderBtn');
     const captureBtn = document.getElementById('captureBtn');
     const statusMessage = document.getElementById('statusMessage');
+    const fallbackPreview = document.getElementById('fallbackPreview');
+    const fallbackPreviewImage = document.getElementById('fallbackPreviewImage');
+    const fallbackSaveBtn = document.getElementById('fallbackSaveBtn');
+    const fallbackDiscardBtn = document.getElementById('fallbackDiscardBtn');
 
     const DEFAULT_FOLDER = 'Pictures';
+
+    // キャプチャもスクリプト注入も不可能なURL
+    const BLOCKED_PREFIXES = [
+        'chrome://', 'edge://', 'chrome-extension://',
+        'devtools://', 'view-source:', 'about:'
+    ];
 
     // --- 初期化 ---
     init();
@@ -83,6 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- キャプチャ開始 ---
     captureBtn.addEventListener('click', async () => {
         hideStatus();
+        fallbackPreview.classList.add('hidden');
 
         try {
             const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -92,22 +103,94 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            if (tab.url.startsWith('chrome://') || tab.url.startsWith('edge://') || tab.url.startsWith('chrome-extension://')) {
-                showStatus('このページではキャプチャできません', 'error');
+            // 完全ブロック対象のページ判定
+            if (BLOCKED_PREFIXES.some(prefix => tab.url.startsWith(prefix))) {
+                showStatus('このページではキャプチャできません（ブラウザの制限ページ）', 'error');
                 return;
             }
 
-            await chrome.scripting.executeScript({
-                target: { tabId: tab.id },
-                files: ['content/content.js']
-            });
-
-            window.close();
+            // コンテンツスクリプト注入を試行
+            try {
+                await chrome.scripting.executeScript({
+                    target: { tabId: tab.id },
+                    files: ['content/content.js']
+                });
+                window.close();
+            } catch (injectionError) {
+                // スクリプト注入失敗 → ページ全体キャプチャにフォールバック
+                console.warn('Script injection failed, falling back to full-tab capture:', injectionError);
+                showStatus('範囲指定が使えないページです。ページ全体をキャプチャします...', 'info');
+                await captureFullTab();
+            }
 
         } catch (error) {
             console.error('Failed to start capture:', error);
             showStatus('キャプチャの開始に失敗しました', 'error');
         }
+    });
+
+    // --- フォールバック: ページ全体キャプチャ ---
+    async function captureFullTab() {
+        try {
+            const response = await chrome.runtime.sendMessage({ action: 'captureTab' });
+
+            if (!response || !response.success) {
+                showStatus('キャプチャに失敗しました: ' + (response?.error || '不明なエラー'), 'error');
+                return;
+            }
+
+            // プレビュー表示
+            fallbackPreviewImage.src = response.dataUrl;
+            fallbackPreview.classList.remove('hidden');
+            hideStatus();
+
+            // 一時的にキャプチャデータを保持
+            fallbackPreview.dataset.imageData = response.dataUrl;
+        } catch (error) {
+            console.error('Full-tab capture failed:', error);
+            showStatus('キャプチャに失敗しました', 'error');
+        }
+    }
+
+    // --- フォールバック: 保存ボタン ---
+    fallbackSaveBtn.addEventListener('click', async () => {
+        const imageData = fallbackPreview.dataset.imageData;
+        if (!imageData) return;
+
+        fallbackSaveBtn.disabled = true;
+        fallbackSaveBtn.textContent = '⌛ 保存中...';
+
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').replace('T', '_').slice(0, 19);
+        const filename = `screenshot_${timestamp}.png`;
+
+        chrome.runtime.sendMessage({
+            action: 'downloadImage',
+            imageData: imageData,
+            filename: filename
+        }, (response) => {
+            if (response && response.success) {
+                fallbackSaveBtn.textContent = '✅ 完了';
+                showStatus('保存しました', 'success');
+                setTimeout(() => {
+                    fallbackPreview.classList.add('hidden');
+                    fallbackSaveBtn.disabled = false;
+                    fallbackSaveBtn.textContent = '💾 保存する';
+                    delete fallbackPreview.dataset.imageData;
+                }, 1000);
+            } else {
+                fallbackSaveBtn.disabled = false;
+                fallbackSaveBtn.textContent = '💾 保存する';
+                showStatus('保存に失敗しました: ' + (response?.error || '不明なエラー'), 'error');
+            }
+        });
+    });
+
+    // --- フォールバック: 破棄ボタン ---
+    fallbackDiscardBtn.addEventListener('click', () => {
+        fallbackPreview.classList.add('hidden');
+        fallbackPreviewImage.src = '';
+        delete fallbackPreview.dataset.imageData;
+        hideStatus();
     });
 
     // --- ステータス表示 ---

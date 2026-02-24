@@ -39,6 +39,20 @@
             </button>
         </section>
 
+        <!-- フォールバック: ページ全体キャプチャのプレビュー -->
+        <section id="fallbackPreview" class="preview-section hidden">
+            <div class="preview-header">
+                <span class="preview-label">📸 ページ全体キャプチャ</span>
+            </div>
+            <div class="preview-container">
+                <img id="fallbackPreviewImage" class="preview-image" alt="キャプチャプレビュー">
+            </div>
+            <div class="action-buttons">
+                <button id="fallbackDiscardBtn" class="btn-discard">🗑️ 破棄する</button>
+                <button id="fallbackSaveBtn" class="btn-save">💾 保存する</button>
+            </div>
+        </section>
+
         <!-- ステータス表示 -->
         <div id="statusMessage" class="status-message hidden"></div>
     </div>
